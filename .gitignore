@@ -1,0 +1,9 @@
+Thumbs.db
+.project
+.settings
+.buildpath
+.idea/
+/nbproject
+/vendor/
+/cache/
+/log/

@@ -2,6 +2,7 @@ Thumbs.db
 .project
 .settings
 .buildpath
+composer.lock
 .idea/
 /nbproject
 /vendor/

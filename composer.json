@@ -1,0 +1,17 @@
+{
+  "name": "kowach/evidencija-radnog-vremena",
+  "description": "Web aplikacija za izradu tablice evidencije radnog vremena",
+  "minimum-stability": "dev",
+  "license": "MIT License",
+  "homepage": "http://tvprofil.net/evidencija-radnog-vremena/",
+  "authors": [
+    {
+      "name": "Vladimir Kovačević",
+      "email": "kowach@tvprofil.net"
+    }
+  ],
+  "require": {
+    "phpoffice/phpexcel": "1.8.1",
+    "u01jmg3/ics-parser": "2.0.0"
+  }
+}

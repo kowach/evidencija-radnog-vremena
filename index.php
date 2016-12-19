@@ -1,9 +1,32 @@
 <?php
+/**
+ * Evidencija radnog vremena
+ *
+ * @author    Vladimir Kovačević
+ * @created   23-Feb-2016
+ * @link      https://github.com/kowach/evidencija-radnog-vremena
+ * @licence   MIT License
+ *
+ */
+use ICal\ICal;
+
 error_reporting(E_ALL);
 date_default_timezone_set( 'UTC' );
-setlocale(LC_ALL, 'hr_HR.UTF-8');
 mb_internal_encoding( 'UTF-8' );
-//ini_set('display_errors',E_ALL);
+if(getenv('APPLICATION_ENV')=='development') {
+    ini_set('display_errors',E_ALL);
+}
+
+require __DIR__ . '/vendor/autoload.php';
+
+# configuration
+$calendarUrl = 'https://www.google.com/calendar/ical/croatian__hr%40holiday.calendar.google.com/public/basic.ics';
+$locale = 'hr_HR';
+$url = parse_url($_SERVER['REQUEST_URI']);
+$baseUrl = $url['path'];
+setlocale(LC_ALL, $locale.'.UTF-8');
+$calendarCacheFile = __DIR__ . '/cache/i_calendar_cache_file.ics';
+$xlsTemplateFile = __DIR__ . '/assets/evidencija-randog-vremena.xlsx';
 
 /**
  * Filtrira post varijablu
@@ -23,25 +46,24 @@ function getPostVal($key)
 
 if($_SERVER['REQUEST_METHOD']=='POST') {
 
+    # IntlDateFormatter needs php extension intl
     # http://userguide.icu-project.org/formatparse/datetime
-    $formatter = new IntlDateFormatter('hr_HR', IntlDateFormatter::FULL, IntlDateFormatter::FULL);
+    $formatter = new IntlDateFormatter($locale, IntlDateFormatter::FULL, IntlDateFormatter::FULL);
 
 
-    require_once '/var/www/vhost/common/lib/phpExcel/PHPExcel.php';
-    require_once '/var/www/vhost/common/lib/phpExcel/PHPExcel/IOFactory.php';
-
-    require_once 'class.iCalReader.php';
-
-    $calendarUrl = 'https://www.google.com/calendar/ical/croatian__hr%40holiday.calendar.google.com/public/basic.ics';
-    $calendarFile = 'hr_praznici.ics';
-
-
-    if(!file_exists($calendarFile) || filectime($calendarFile)+86400*60 < time()) {
-        file_put_contents($calendarFile, file_get_contents($calendarUrl));
+    if(!file_exists($calendarCacheFile) || filectime($calendarCacheFile)+86400*60 < time()) {
+        $cacheDir = dirname($calendarCacheFile);
+        if(!file_exists($cacheDir) ) {
+            if ( ! mkdir( $cacheDir, 0777 ) ) {
+                die( "ERROR: Cannot create cache dir: $cacheDir" );
+            }
+        }
+        if(!file_put_contents($calendarCacheFile, file_get_contents($calendarUrl))) {
+            die("ERROR: Cannot write cache iCalendar cache file");
+        }
     }
 
-
-    $objPHPExcel = PHPExcel_IOFactory::load(  dirname( __FILE__ ) . '/evidencija-randog-vremena.xlsx' );
+    $objPHPExcel = PHPExcel_IOFactory::load( $xlsTemplateFile );
     $sheet = $objPHPExcel->getActiveSheet();
 
     $trenutni_mjesec = isset($_POST['trenutni_mjesec'])&&$_POST['trenutni_mjesec']==1;
@@ -78,13 +100,13 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
 
 
 
-    $ical = new ICal($calendarFile);
+    $ical = new ICal($calendarCacheFile);
     $events = $ical->events();
 
     // praznici u trenutnom mjesecu
     $praznici=[];
     foreach($events as $event) {
-        $praznik = new DateTime( '@'. $ical->iCalDateToUnixTimestamp($event['DTSTART']));
+        $praznik = new DateTime( '@'. $ical->iCalDateToUnixTimestamp($event->dtstart));
         if($date->format('Y')==$praznik->format('Y') && $date->format('m')==$praznik->format('m'))
         {
             $praznici[]=(int)$praznik->format('j');
@@ -170,8 +192,8 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
     <meta name="viewport" content="width=device-width; initial-scale=1;">
     <meta name="description" content="Evidencija radnog vremena - Web aplikacija za izradu tablice evidencije radnog vremena"/>
     <meta property="og:title" content="Evidencija radnog vremena - Web aplikacija"/>
-    <meta property="og:image" content="http://tvprofil.net/evidencija-radnog-vremena/evidencija%20radnog%20vremena%20-%20web_app.png"/>
-    <meta property="og:url" content="http://tvprofil.net/evidencija-radnog-vremena/" />
+    <meta property="og:image" content="<?php echo $baseUrl; ?>assets/evidencija%20radnog%20vremena%20-%20web_app.png"/>
+    <meta property="og:url" content="<?php echo $baseUrl; ?>" />
     <link rel="stylesheet" href="assets/bootstrap.min.css">
     <script src="assets/jquery.min.js"></script>
     <style>
@@ -309,7 +331,7 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
         <h1>Evidencija radnog vremena</h1>
         <p>Besplatna web aplikacija za izradu tablice evidencije radnog vremena koju je moguće naknadno urediti. <br/>
             UPUTE: Poslodavci i zaposlenici se spremaju u memoriju browsera i bit će dostupni samo na istom računalu i browseru.<br/>
-            Klikom na download se skida XLSX tablica s popunjenim poljima za odabrani mjesec (<a target="_blank" href="http://tvprofil.net/evidencija-radnog-vremena/evidencija radnog vremena - screen_xls.png">screen shot</a>).
+            Klikom na download se skida XLSX tablica s popunjenim poljima za odabrani mjesec (<a target="_blank" href="<?php echo $baseUrl; ?>assets/evidencija radnog vremena - screen_xls.png">screen shot</a>).
 
         </p>
         <p><a target="_blank" href="http://www.metaprofile.tv/hr/kontakt/">&copy; Informatika i savjetovanje d.o.o.</a></p>
@@ -422,10 +444,6 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
     </script>
 </div>
 
-<?php
-
-
-?>
 
 <script type="text/javascript">
     (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){

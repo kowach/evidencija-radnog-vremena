@@ -28,6 +28,20 @@ setlocale(LC_ALL, $locale.'.UTF-8');
 $calendarCacheFile = __DIR__ . '/cache/i_calendar_cache_file.ics';
 $xlsTemplateFile = __DIR__ . '/assets/evidencija-randog-vremena.xlsx';
 
+
+$notWorkingReasons = [
+    11=>'Godišnji odmor',
+    26=>'Vrijeme mirovanja radnig odnosa ili korištenje drgih prava u skladu s posebnim propisom',
+    27=>'Vrijeme plaćenog dopusta',
+    28=>'Vrijeme neplaćenog dopusta',
+    29=>'Vrijeme spriječenosti za rad zbog privremene nesposobnosit za rad-bolovanje',
+    30=>'Vrijeme korištenja rodiljnog i roditeljskog dopusta te drugih prava prema posebnom propisu',
+    31=>'Vrijeme isključenja s rada (lockout)',
+    32=>'Vrijeme provedeno u štrajku',
+    33=>'Vrijeme nenazočnosti u tijeku dnevnog radnog vremena po zahtjevu radnika',
+    34=>'Vrijeme nenazočnosit u tijeku dnevnog radnog vremena u kojima radnik nsvojom krivnjom neobavlja rad'
+];
+
 /**
  * Filtrira post varijablu
  *
@@ -67,6 +81,9 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
     $sheet = $objPHPExcel->getActiveSheet();
 
     $trenutni_mjesec = isset($_POST['trenutni_mjesec'])&&$_POST['trenutni_mjesec']==1;
+
+    # Default: godišnji odmor
+    $notWorkingReason = (int) (isset($notWorkingReasons[$_POST['notWorkingReason']])?$_POST['notWorkingReason']:11);
 
     $godisnji_od = (int) (isset($_POST['godisnji_od'])?$_POST['godisnji_od']:0);
     $godisnji_do = (int) (isset($_POST['godisnji_do'])?$_POST['godisnji_do']:0);
@@ -150,11 +167,11 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
 
             # godišnji
             if($i>=$godisnji_od && $i<=$godisnji_do) {
-                $col = 11; // Vrijeme korištenja godišnjeg odmora
+                $col = $notWorkingReason; // Vrijeme korištenja neradnog vremena
             }
 
             # praznici
-            if( in_array($i, $praznici) ) {
+            if( in_array($i, $praznici) && $notWorkingReason==11 ) {
                 if($blagdan==true) {
                     $col = 18; // Blagdan I-smj
                 } else {
@@ -414,7 +431,11 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
                 <input class="form-control" type="checkbox" name="trenutni_mjesec" id="trenutni_mjesec" value="1">
             </div>
             <div class="form-group">
-                <label for="godisnji_od">Godišnji odmor od</label>
+                <label for="godisnji_od"><select name="notWorkingReason" class="form-control" style="width: 200px;">
+                        <?php
+                        foreach ($notWorkingReasons as $i=>$reason) echo '<option value="'.$i.'">'.htmlspecialchars($reason).'</option>';
+                        ?>
+                    </select> od</label>
                 <select class="form-control" name="godisnji_od" id="godisnji_od"><option></option></select>
                 do
                 <select class="form-control" name="godisnji_do" id="godisnji_do"><option></option></select>

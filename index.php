@@ -123,6 +123,8 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
     // praznici u trenutnom mjesecu
     $praznici=[];
     foreach($events as $event) {
+        if(in_array($event->summary, ['Roš hašana', 'Yom Kipura', 'Pravoslavni Božić', 'Ramadan Bajram', 'Kurban Bajram'], true)) continue;
+
         $praznik = new DateTime( '@'. $ical->iCalDateToUnixTimestamp($event->dtstart));
         if($date->format('Y')==$praznik->format('Y') && $date->format('m')==$praznik->format('m'))
         {

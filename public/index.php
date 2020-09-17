@@ -17,13 +17,12 @@ if(getenv('APPLICATION_ENV')=='development') {
     ini_set('display_errors',E_ALL);
 }
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/../vendor/autoload.php';
 
 # configuration
 $calendarUrl = 'https://www.google.com/calendar/ical/croatian__hr%40holiday.calendar.google.com/public/basic.ics';
 $locale = 'hr_HR';
-$url = parse_url($_SERVER['REQUEST_URI']);
-$baseUrl = $url['path'];
+$baseUrl = dirname( parse_url($_SERVER['PHP_SELF']) );
 setlocale(LC_ALL, $locale.'.UTF-8');
 $calendarCacheFile = __DIR__ . '/cache/i_calendar_cache_file.ics';
 $xlsTemplateFile = __DIR__ . '/assets/evidencija-randog-vremena.xlsx';
@@ -208,7 +207,7 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
 <head>
     <title>Evidencija radnog vremena - Web aplikacija</title>
     <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-    <meta name="viewport" content="width=device-width; initial-scale=1;">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Evidencija radnog vremena - Web aplikacija za izradu tablice evidencije radnog vremena"/>
     <meta property="og:title" content="Evidencija radnog vremena - Web aplikacija"/>
     <meta property="og:image" content="<?php echo $baseUrl; ?>assets/evidencija%20radnog%20vremena%20-%20web_app.png"/>
@@ -274,9 +273,9 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
                         .text(i));
             }
             for(i=1;i<=12;i++) {
-                $('#mjesec')
-                    .append($('<option>', { value : i })
-                        .text(i));
+                let option = $('<option>', { value : i }).text(i);
+                if(new Date().getMonth()==i) option.prop('selected',true);
+                $('#mjesec').append(option);
             }
             for(var g=2014;g<=2025;g++) {
                 $('#godina')
@@ -361,96 +360,109 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
 
     <div class="jumbotron">
         <form class="form-inline" onsubmit="return false">
-            <div class="form-group">
-                <label for="poslodavac1">Poslodavac</label>
-                <input type="text" class="form-control" id="poslodavac1" placeholder="poslodavac d.o.o.">
+            <div class="form-row pb-1">
+                <div class="form-group">
+                    <label for="poslodavac1">Poslodavac:</label>
+                    <input type="text" class="form-control" id="poslodavac1" placeholder="poslodavac d.o.o.">
+                </div>
+                <div class="form-group">
+                    <label for="oib1">OIB:</label>
+                    <input type="text" class="form-control" id="oib1" placeholder="OIB">
+                </div>
+                <button type="button" class="btn btn-light" id="dodajPoslodavca">Dodaj</button>
             </div>
-            <div class="form-group">
-                <label for="oib1">OIB</label>
-                <input type="text" class="form-control" id="oib1" placeholder="OIB">
-            </div>
-            <button type="button" class="btn btn-default" id="dodajPoslodavca">Dodaj</button>
-
             <hr/>
 
-            <div class="form-group">
-                <label for="zaposlenik2">Zaposlenik</label>
-                <input type="text" class="form-control" id="zaposlenik2" placeholder="ime prezime">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="zaposlenik2">Zaposlenik:</label>
+                    <input type="text" class="form-control" id="zaposlenik2" placeholder="ime prezime">
+                </div>
+                <div class="form-group">
+                    <label for="oib2">OIB:</label>
+                    <input type="text" class="form-control" id="oib2" placeholder="OIB">
+                </div>
+                <div class="form-group">
+                    <label for="oib2">Adresa:</label>
+                    <input type="text" class="form-control" id="adresa2" placeholder="adresa broj, grad">
+                </div>
+                <button type="button" class="btn btn-light" id="dodajZaposlenika">Dodaj</button>
             </div>
-            <div class="form-group">
-                <label for="oib2">OIB</label>
-                <input type="text" class="form-control" id="oib2" placeholder="OIB">
-            </div>
-            <div class="form-group">
-                <label for="oib2">Adresa</label>
-                <input type="text" class="form-control" id="adresa2" placeholder="adresa broj, grad">
-            </div>
-            <button type="button" class="btn btn-default" id="dodajZaposlenika">Dodaj</button>
         </form>
     </div>
     <div class="jumbotron">
         <form class="form-inline" method="post" id="form-post" action="index.php" onsubmit="return submitData()">
-            <div class="form-group">
-                <label for="pocetak">Početak i kraj rada:</label>
-                <input class="form-control" name="pocetak" id="pocetak" size="2" value="8">
-                <input class="form-control" name="kraj" id="kraj" size="2" value="16">
+            <div class="form-row pb-2">
+                <div class="form-group">
+                    <label for="pocetak">Početak i kraj rada:</label>
+                    <input class="form-control" name="pocetak" id="pocetak" size="2" value="8">
+                    <input class="form-control" name="kraj" id="kraj" size="2" value="16">
+                </div>
+                <div class="form-group">
+                    <label for="satnica">Dnevna satnica:</label>
+                    <input class="form-control" name="satnica" id="satnica" size="2" value="8">
+                </div>
+                <div class="form-group">
+                    <label for="subota">Rad subotom (sati):</label>
+                    <input class="form-control" name="subota" id="subota" size="2" value="">
+                </div>
+                <div class="form-group">
+                    <label for="blagdan">Rad blagdanima</label>
+                    <input class="form-control" type="checkbox" name="blagdan" id="blagdan" value="1">
+                </div>
             </div>
-            <div class="form-group">
-                <label for="satnica">Dnevna satnica:</label>
-                <input class="form-control" name="satnica" id="satnica" size="2" value="8">
-            </div>
-            <div class="form-group">
-                <label for="subota">Rad subotom (sati):</label>
-                <input class="form-control" name="subota" id="subota" size="2" value="">
-            </div>
-            <div class="form-group">
-                <label for="blagdan">Rad blagdanima</label>
-                <input class="form-control" type="checkbox" name="blagdan" id="blagdan" value="1">
-            </div>
-            <div class="form-group">
-                <label for="poslodavac">Poslodavac</label>
-                <select class="form-control" name="poslodavac" id="poslodavac" style="max-width: 300px"></select>
-                <button type="button" class="form-control btn-danger btn-sm" onclick="removePoslodavac()" title="Obriši poslodavca">×</button>
-            </div>
-            <div class="form-group">
-                <label for="zaposlenik">Zaposlenik</label>
-                <select class="form-control" name="zaposlenik" id="zaposlenik" style="max-width: 300px"></select>
-                <button type="button" class="form-control btn-danger btn-sm" onclick="removeZaposlenik()" title="Obriši zaposlenika">×</button>
-            </div>
-
-            <br/>
-
-            <div class="form-group">
-                <label for="mjesec">Mjesec</label>
-                <select class="form-control" name="mjesec" id="mjesec"></select>
-            </div>
-            <div class="form-group">
-                <label for="godina">Godina</label>
-                <select class="form-control" name="godina" id="godina"></select>
-            </div>
-            <div class="form-group">
-                <label for="trenutni_mjesec">Za trenutni mjesec ispuni samo do danas</label>
-                <input class="form-control" type="checkbox" name="trenutni_mjesec" id="trenutni_mjesec" value="1">
-            </div>
-            <div class="form-group">
-                <label for="godisnji_od"><select name="notWorkingReason" class="form-control" style="width: 200px;">
-                        <?php
-                        foreach ($notWorkingReasons as $i=>$reason) echo '<option value="'.$i.'">'.htmlspecialchars($reason).'</option>';
-                        ?>
-                    </select> od</label>
-                <select class="form-control" name="godisnji_od" id="godisnji_od"><option></option></select>
-                do
-                <select class="form-control" name="godisnji_do" id="godisnji_do"><option></option></select>
+            <div class="form-row pb-2">
+                <div class="form-group">
+                    <label for="poslodavac">Poslodavac</label>
+                    <select class="form-control" name="poslodavac" id="poslodavac" style="max-width: 300px"></select>
+                    <button type="button" class="form-control btn-danger btn-sm" onclick="removePoslodavac()" title="Obriši poslodavca">×</button>
+                </div>
+                <div class="form-group">
+                    <label for="zaposlenik">Zaposlenik</label>
+                    <select class="form-control" name="zaposlenik" id="zaposlenik" style="max-width: 300px"></select>
+                    <button type="button" class="form-control btn-danger btn-sm" onclick="removeZaposlenik()" title="Obriši zaposlenika">×</button>
+                </div>
             </div>
 
-
-            <br/>
-            <button type="submit" class="btn btn-success">Download</button>
+            <div class="form-row pb-2">
+                <div class="form-group">
+                    <label for="mjesec">Mjesec</label>
+                    <select class="form-control" name="mjesec" id="mjesec"></select>
+                </div>
+                <div class="form-group">
+                    <label for="godina">Godina</label>
+                    <select class="form-control" name="godina" id="godina"></select>
+                </div>
+                <div class="form-group">
+                    <label for="trenutni_mjesec">Za trenutni mjesec ispuni samo do danas</label>
+                    <input class="form-control" type="checkbox" name="trenutni_mjesec" id="trenutni_mjesec" value="1">
+                </div>
+                <div class="form-group">
+                    <label for="godisnji_od"><select name="notWorkingReason" class="form-control" style="width: 200px;">
+                            <?php
+                            foreach ($notWorkingReasons as $i=>$reason) echo '<option value="'.$i.'">'.htmlspecialchars($reason).'</option>';
+                            ?>
+                        </select> od</label>
+                    <select class="form-control" name="godisnji_od" id="godisnji_od"><option></option></select>
+                    do
+                    <select class="form-control" name="godisnji_do" id="godisnji_do"><option></option></select>
+                </div>
+            </div>
+            <div class="form-row pb-2">
+                <div class="form-group">
+                    <button type="submit" class="form-control btn btn-success">Download</button>
+                </div>
+            </div>
 
 
         </form>
-        <div class="pull-right text-xs-right">
-            Kontakt: <a target="_blank" href="mailto:tvprofil@tvprofil.net?subject=Evidencija+radnog+vremena">tvprofil@tvprofil.net</a>. Posjetite naš regionalni TV portal: <a target="_blank" title="TV program" href="http://tvprofil.net">http://tvprofil.net</a>
+
+        <div class="row">
+            <div class="col">
+                <div class="text-right">
+                    Kontakt: <a target="_blank" href="mailto:tvprofil@tvprofil.net?subject=Evidencija+radnog+vremena">tvprofil@tvprofil.net</a>. Posjetite naš regionalni TV portal: <a target="_blank" title="TV program" href="https://tvprofil.com">https://tvprofil.com</a>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -11,7 +11,7 @@
     }
   ],
   "require": {
-    "phpoffice/phpexcel": "^1.8.0",
+    "phpoffice/phpspreadsheet": "1.*",
     "johngrogg/ics-parser": "^2.0.0"
   }
 }

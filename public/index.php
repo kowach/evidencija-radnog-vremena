@@ -9,6 +9,8 @@
  *
  */
 use ICal\ICal;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 error_reporting(E_ALL);
 date_default_timezone_set( 'UTC' );
@@ -21,24 +23,32 @@ require __DIR__ . '/../vendor/autoload.php';
 
 # configuration
 $calendarUrl = 'https://www.google.com/calendar/ical/croatian__hr%40holiday.calendar.google.com/public/basic.ics';
+$skipCalendarHolidays = [
+    'Roš hašana',
+    'Yom Kipura',
+    'Pravoslavni Božić',
+    'Ramadan Bajram',
+    'Kurban Bajram',
+    'Dan nezavisnosti'
+];
 $locale = 'hr_HR';
-$baseUrl = dirname( parse_url($_SERVER['PHP_SELF']) );
+$baseUrl = dirname( $_SERVER['PHP_SELF'] );
 setlocale(LC_ALL, $locale.'.UTF-8');
-$calendarCacheFile = __DIR__ . '/cache/i_calendar_cache_file.ics';
+$calendarCacheFile = __DIR__ . '/../cache/i_calendar_cache_file.ics';
 $xlsTemplateFile = __DIR__ . '/assets/evidencija-randog-vremena.xlsx';
 
 
 $notWorkingReasons = [
-    11=>'Godišnji odmor',
-    26=>'Vrijeme mirovanja radnig odnosa ili korištenje drgih prava u skladu s posebnim propisom',
-    27=>'Vrijeme plaćenog dopusta',
-    28=>'Vrijeme neplaćenog dopusta',
-    29=>'Vrijeme spriječenosti za rad zbog privremene nesposobnosit za rad-bolovanje',
-    30=>'Vrijeme korištenja rodiljnog i roditeljskog dopusta te drugih prava prema posebnom propisu',
-    31=>'Vrijeme isključenja s rada (lockout)',
-    32=>'Vrijeme provedeno u štrajku',
-    33=>'Vrijeme nenazočnosti u tijeku dnevnog radnog vremena po zahtjevu radnika',
-    34=>'Vrijeme nenazočnosit u tijeku dnevnog radnog vremena u kojima radnik nsvojom krivnjom neobavlja rad'
+    12=>'Godišnji odmor',
+    27=>'Vrijeme mirovanja radnig odnosa ili korištenje drgih prava u skladu s posebnim propisom',
+    28=>'Vrijeme plaćenog dopusta',
+    29=>'Vrijeme neplaćenog dopusta',
+    30=>'Vrijeme spriječenosti za rad zbog privremene nesposobnosit za rad-bolovanje',
+    31=>'Vrijeme korištenja rodiljnog i roditeljskog dopusta te drugih prava prema posebnom propisu',
+    32=>'Vrijeme isključenja s rada (lockout)',
+    33=>'Vrijeme provedeno u štrajku',
+    34=>'Vrijeme nenazočnosti u tijeku dnevnog radnog vremena po zahtjevu radnika',
+    35=>'Vrijeme nenazočnosit u tijeku dnevnog radnog vremena u kojima radnik nsvojom krivnjom neobavlja rad'
 ];
 
 /**
@@ -57,7 +67,7 @@ function getPostVal($key)
     return $val;
 }
 
-if($_SERVER['REQUEST_METHOD']=='POST') {
+if($_SERVER['REQUEST_METHOD']==='POST') {
 
     # IntlDateFormatter needs php extension intl
     # http://userguide.icu-project.org/formatparse/datetime
@@ -75,14 +85,15 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
             die("ERROR: Cannot write cache iCalendar cache file");
         }
     }
+    $xlsReader = IOFactory::createReader('Xlsx');
+    $spreadsheet = $xlsReader->load($xlsTemplateFile);
+    $sheet = $spreadsheet->getActiveSheet();
 
-    $objPHPExcel = PHPExcel_IOFactory::load( $xlsTemplateFile );
-    $sheet = $objPHPExcel->getActiveSheet();
 
     $trenutni_mjesec = isset($_POST['trenutni_mjesec'])&&$_POST['trenutni_mjesec']==1;
 
     # Default: godišnji odmor
-    $notWorkingReason = (int) (isset($notWorkingReasons[$_POST['notWorkingReason']])?$_POST['notWorkingReason']:11);
+    $notWorkingReason = (int) (isset($notWorkingReasons[$_POST['notWorkingReason']])?$_POST['notWorkingReason']:12);
 
     $godisnji_od = (int) (isset($_POST['godisnji_od'])?$_POST['godisnji_od']:0);
     $godisnji_do = (int) (isset($_POST['godisnji_do'])?$_POST['godisnji_do']:0);
@@ -104,10 +115,10 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
     }
 
 
-    $sheet->setCellValueExplicit('D2', getPostVal('poslodavac_naziv') );
-    $sheet->setCellValueExplicit('D3', getPostVal('zaposlenik_naziv') );
-    $sheet->setCellValueExplicit('M3', getPostVal('zaposlenik_oib') );
-    $sheet->setCellValueExplicit('W3', getPostVal('zaposlenik_adresa') );
+    $sheet->setCellValue('D2', getPostVal('poslodavac_naziv') );
+    $sheet->setCellValue('D3', getPostVal('zaposlenik_naziv') );
+    $sheet->setCellValue('M3', getPostVal('zaposlenik_oib') );
+    $sheet->setCellValue('W3', getPostVal('zaposlenik_adresa') );
     $date = new DateTime();
 
     $curDay = (int)$date->format('d');
@@ -122,7 +133,7 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
     // praznici u trenutnom mjesecu
     $praznici=[];
     foreach($events as $event) {
-        if(in_array($event->summary, ['Roš hašana', 'Yom Kipura', 'Pravoslavni Božić', 'Ramadan Bajram', 'Kurban Bajram','Dan nezavisnosti'], true)) continue;
+        if(in_array($event->summary, $skipCalendarHolidays, true)) continue;
 
         $praznik = new DateTime( '@'. $ical->iCalDateToUnixTimestamp($event->dtstart));
         if($date->format('Y')==$praznik->format('Y') && $date->format('m')==$praznik->format('m'))
@@ -132,8 +143,8 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
     }
 
     $formatter->setPattern('LLLL');
-    $sheet->setCellValueExplicit('Q2', mb_strtoupper( $formatter->format($date) ) );
-    $sheet->setCellValueExplicit('U2', $date->format('Y') );
+    $sheet->setCellValue('Q2', mb_strtoupper( $formatter->format($date) ) );
+    $sheet->setCellValue('U2', $date->format('Y') );
 
     $formatter->setPattern('yyyy LLLL');
     $fileName =  $formatter->format($date)." - ".getPostVal('zaposlenik_naziv');
@@ -141,8 +152,8 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
     $ukupnoSati = 0;
     $formatter->setPattern('EEEEE');
     for($i=1;$i<=$mjesec_dana;$i++) {
-        $sheet->setCellValueByColumnAndRow( 1, 5+$i, $date->format('d') );
-        $sheet->setCellValueByColumnAndRow( 2, 5+$i, mb_strtoupper($formatter->format($date)) );
+        $sheet->setCellValueByColumnAndRow( 2, 5+$i, $date->format('d') );
+        $sheet->setCellValueByColumnAndRow( 3, 5+$i, mb_strtoupper($formatter->format($date)) );
 
         //if($subota)
         $w = $date->format('w');
@@ -160,11 +171,11 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
                 $satnica = (int)@$_POST['satnica'];
             }
 
-            $sheet->setCellValueByColumnAndRow( 3, 5+$i, (int)@$_POST['pocetak'] );
-            $sheet->setCellValueByColumnAndRow( 4, 5+$i, $kraj );
-            $sheet->setCellValueByColumnAndRow( 6, 5+$i, $satnica );
+            $sheet->setCellValueByColumnAndRow( 4, 5+$i, (int)@$_POST['pocetak'] );
+            $sheet->setCellValueByColumnAndRow( 5, 5+$i, $kraj );
+            $sheet->setCellValueByColumnAndRow( 7, 5+$i, $satnica );
 
-            $col = 12; // I smjena (default)
+            $col = 13; // I smjena (default)
 
             # godišnji
             if($i>=$godisnji_od && $i<=$godisnji_do) {
@@ -172,11 +183,11 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
             }
 
             # praznici
-            if( in_array($i, $praznici) && $notWorkingReason==11 ) {
+            if( in_array($i, $praznici) && $notWorkingReason==12 ) {
                 if($blagdan==true) {
-                    $col = 18; // Blagdan I-smj
+                    $col = 19; // Blagdan I-smj
                 } else {
-                    $col = 25; // Neradni dani i blagdani utvrđeni propisom
+                    $col = 26; // Neradni dani i blagdani utvrđeni propisom
                 }
             }
 
@@ -189,15 +200,31 @@ if($_SERVER['REQUEST_METHOD']=='POST') {
 
     }
 
+    # Fix LibreOffice warning: The data could not be loaded completely because the maximum number of columns per sheet was exceeded.
+    $maxColumnIndex = 100;
+
+    $columnDimensions = $sheet->getColumnDimensions();
+    foreach ($columnDimensions as $col => $dimension) {
+        if (PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($col) > $maxColumnIndex) {
+            unset($columnDimensions[$col]);
+        }
+    }
+
+    $reflector = new ReflectionClass($sheet);
+    $property = $reflector->getProperty('columnDimensions');
+    $property->setAccessible(true);
+    $property->setValue($sheet, $columnDimensions);
+
+
 
     # Render
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     header('Content-Disposition: attachment;filename="'.$fileName.'.xlsx"');
     header('Cache-Control: max-age=0');
 
-    $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
-    $objWriter->setPreCalculateFormulas();
-    $objWriter->save('php://output');
+    $excelWriter = new Xlsx($spreadsheet);
+    $excelWriter->setPreCalculateFormulas(true);
+    $excelWriter->save('php://output');
 
     exit;
 }

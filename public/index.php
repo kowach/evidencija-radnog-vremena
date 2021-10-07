@@ -22,19 +22,13 @@ if(getenv('APPLICATION_ENV')=='development') {
 require __DIR__ . '/../vendor/autoload.php';
 
 # configuration
-$calendarUrl = 'https://www.google.com/calendar/ical/croatian__hr%40holiday.calendar.google.com/public/basic.ics';
-$skipCalendarHolidays = [
-    'Roš hašana',
-    'Yom Kipura',
-    'Pravoslavni Božić',
-    'Ramadan Bajram',
-    'Kurban Bajram',
-    'Dan nezavisnosti'
-];
+$year = date('Y');
+$calendarUrl = 'https://www.kayaposoft.com/enrico/ics/v2.0?country=hrv&fromDate=01-01-'.($year-1).'&toDate=31-12-'.($year+2).'&region=&holidayType=public_holiday&lang=hr';
+
 $locale = 'hr_HR';
 $baseUrl = dirname( $_SERVER['PHP_SELF'] );
 setlocale(LC_ALL, $locale.'.UTF-8');
-$calendarCacheFile = __DIR__ . '/../cache/i_calendar_cache_file.ics';
+$calendarCacheFile = __DIR__ . '/../cache/i_calendar_cache_file_v2.ics';
 $xlsTemplateFile = __DIR__ . '/assets/evidencija-randog-vremena.xlsx';
 
 
@@ -133,9 +127,8 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
     // praznici u trenutnom mjesecu
     $praznici=[];
     foreach($events as $event) {
-        if(in_array($event->summary, $skipCalendarHolidays, true)) continue;
-
         $praznik = new DateTime( '@'. $ical->iCalDateToUnixTimestamp($event->dtstart));
+
         if($date->format('Y')==$praznik->format('Y') && $date->format('m')==$praznik->format('m'))
         {
             $praznici[]=(int)$praznik->format('j');

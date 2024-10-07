@@ -29,20 +29,15 @@ $locale = 'hr_HR';
 $baseUrl = dirname( $_SERVER['PHP_SELF'] );
 setlocale(LC_ALL, $locale.'.UTF-8');
 $calendarCacheFile = __DIR__ . '/../cache/i_calendar_cache_file_v2.ics';
-$xlsTemplateFile = __DIR__ . '/assets/evidencija-randog-vremena.xlsx';
+$xlsTemplateFile = __DIR__ . '/assets/evidencija-randog-vremena-v2.xlsx';
 
 
 $notWorkingReasons = [
-    12=>'Godišnji odmor',
-    27=>'Vrijeme mirovanja radnig odnosa ili korištenje drgih prava u skladu s posebnim propisom',
-    28=>'Vrijeme plaćenog dopusta',
-    29=>'Vrijeme neplaćenog dopusta',
-    30=>'Vrijeme spriječenosti za rad zbog privremene nesposobnosit za rad-bolovanje',
-    31=>'Vrijeme korištenja rodiljnog i roditeljskog dopusta te drugih prava prema posebnom propisu',
-    32=>'Vrijeme isključenja s rada (lockout)',
-    33=>'Vrijeme provedeno u štrajku',
-    34=>'Vrijeme nenazočnosti u tijeku dnevnog radnog vremena po zahtjevu radnika',
-    35=>'Vrijeme nenazočnosit u tijeku dnevnog radnog vremena u kojima radnik nsvojom krivnjom neobavlja rad'
+    'N'=>'Godišnji odmor',
+    'O'=>'Bolovanje',
+    'P'=>'Plaćenoi dopust',
+    'Q'=>'Očinski dopust',
+    'J'=>'Terenskog rad',
 ];
 
 /**
@@ -86,8 +81,10 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
 
     $trenutni_mjesec = isset($_POST['trenutni_mjesec'])&&$_POST['trenutni_mjesec']==1;
 
-    # Default: godišnji odmor
-    $notWorkingReason = (int) (isset($notWorkingReasons[$_POST['notWorkingReason']])?$_POST['notWorkingReason']:12);
+    $notWorkingReason = '';
+    if(isset($_POST['notWorkingReason'],$notWorkingReasons[$_POST['notWorkingReason']])) {
+        $notWorkingReason = $_POST['notWorkingReason'];
+    }
 
     $godisnji_od = (int) (isset($_POST['godisnji_od'])?$_POST['godisnji_od']:0);
     $godisnji_do = (int) (isset($_POST['godisnji_do'])?$_POST['godisnji_do']:0);
@@ -109,10 +106,7 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
     }
 
 
-    $sheet->setCellValue('D2', getPostVal('poslodavac_naziv') );
-    $sheet->setCellValue('D3', getPostVal('zaposlenik_naziv') );
-    $sheet->setCellValue('M3', getPostVal('zaposlenik_oib') );
-    $sheet->setCellValue('W3', getPostVal('zaposlenik_adresa') );
+    $sheet->setCellValue('D2', getPostVal('zaposlenik_naziv') );
     $date = new DateTime();
 
     $curDay = (int)$date->format('d');
@@ -136,25 +130,25 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
     }
 
     $formatter->setPattern('LLLL');
-    $sheet->setCellValue('Q2', mb_strtoupper( $formatter->format($date) ) );
-    $sheet->setCellValue('U2', $date->format('Y') );
+    $sheet->setCellValue('D3', mb_strtoupper( $formatter->format($date) ) );
+    $sheet->setCellValue('D4', $date->format('Y') );
 
     $formatter->setPattern('yyyy LLLL');
     $fileName =  $formatter->format($date)." - ".getPostVal('zaposlenik_naziv');
 
     $ukupnoSati = 0;
-    $formatter->setPattern('EEEEE');
+    $headingRow = 8;
+    $formatter->setPattern('EEE');
     for($i=1;$i<=$mjesec_dana;$i++) {
-        $sheet->setCellValueByColumnAndRow( 2, 5+$i, $date->format('d') );
-        $sheet->setCellValueByColumnAndRow( 3, 5+$i, mb_strtoupper($formatter->format($date)) );
+        $row = $headingRow+$i;
+        $sheet->setCellValue( 'A'.$row, $date->format('j').'.' );
 
-        //if($subota)
         $w = $date->format('w');
 
         # ako je odabran do danas za trenutni mjesec && nije nedjelja && odabrana subota
         if( (!$trenutni_mjesec || $i <= $curDay) && $w != 0 && ($w != 6 || $subota>0))
         {
-            // && !in_array($i, $praznici)
+            $pocetak = (int)@$_POST['pocetak'];
             if($w == 6 && $subota>0) {
                 $kraj = (int)@$_POST['pocetak'] + $subota;
                 $satnica = $subota;
@@ -164,11 +158,11 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
                 $satnica = (int)@$_POST['satnica'];
             }
 
-            $sheet->setCellValueByColumnAndRow( 4, 5+$i, (int)@$_POST['pocetak'] );
-            $sheet->setCellValueByColumnAndRow( 5, 5+$i, $kraj );
-            $sheet->setCellValueByColumnAndRow( 7, 5+$i, $satnica );
+            $sheet->setCellValue( 'B'.$row, $pocetak.':00' );
+            $sheet->setCellValue( 'C'.$row, $kraj.':00' );
+            $sheet->setCellValue( 'D'.$row, $satnica );
 
-            $col = 13; // I smjena (default)
+            $col = '';
 
             # godišnji
             if($i>=$godisnji_od && $i<=$godisnji_do) {
@@ -176,18 +170,20 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
             }
 
             # praznici
-            if( in_array($i, $praznici) && $notWorkingReason==12 ) {
-                if($blagdan==true) {
-                    $col = 19; // Blagdan I-smj
-                } else {
-                    $col = 26; // Neradni dani i blagdani utvrđeni propisom
-                }
+            if( in_array($i, $praznici, true)  ) {
+                $col = 'G';
+            }
+            if($col!=='') {
+                $sheet->setCellValue($col . $row, $satnica);
             }
 
-            $sheet->setCellValueByColumnAndRow( $col, 5+$i, $satnica );
+
 
 
             $ukupnoSati+=$satnica;
+        }
+        else {
+            $sheet->setCellValue( 'B'.$row, mb_strtoupper($formatter->format($date)) );
         }
         $date->add(new DateInterval('P1D'));
 
@@ -372,7 +368,7 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
             Klikom na download se skida XLSX tablica s popunjenim poljima za odabrani mjesec (<a target="_blank" href="<?php echo $baseUrl; ?>assets/evidencija radnog vremena - screen_xls.png">screen shot</a>).
 
         </p>
-        <p><a target="_blank" href="http://www.metaprofile.tv/hr/kontakt/">&copy; Informatika i savjetovanje d.o.o.</a></p>
+        <p><a target="_blank" href="https://metaprofile.tv/contact-us/">&copy; Metaprofile Data d.o.o.</a></p>
     </div>
 </div>
 <div class="container">

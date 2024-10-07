@@ -15,5 +15,4 @@ Aplikacija je prilagođena za Hrvatsko tržište, no moguće je napraviti i za o
 
 [Contact](mailto:kowach@tvprofil.net)
 [Demo link](http://tvprofil.net/evidencija-radnog-vremena/)
-
-![alt tag](https://raw.githubusercontent.com/kowach/evidencija-radnog-vremena/master/assets/evidencija%20radnog%20vremena%20-%20web_app.png)
+![alt tag](https://raw.githubusercontent.com/kowach/evidencija-radnog-vremena/master/public/assets/evidencija%20radnog%20vremena%20-%20web_app.png)

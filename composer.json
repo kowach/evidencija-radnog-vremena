@@ -11,6 +11,9 @@
     }
   ],
   "require": {
+    "ext-mbstring": "*",
+    "ext-intl": "*",
+    "ext-calendar": "*",
     "phpoffice/phpspreadsheet": "1.*",
     "johngrogg/ics-parser": "^2.0.0"
   }

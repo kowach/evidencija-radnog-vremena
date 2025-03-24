@@ -15,7 +15,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 error_reporting(E_ALL);
 date_default_timezone_set( 'UTC' );
 mb_internal_encoding( 'UTF-8' );
-if(getenv('APPLICATION_ENV')=='development') {
+if(getenv('APPLICATION_ENV')==='development') {
     ini_set('display_errors',E_ALL);
 }
 
@@ -29,14 +29,14 @@ $locale = 'hr_HR';
 $baseUrl = dirname( $_SERVER['PHP_SELF'] );
 setlocale(LC_ALL, $locale.'.UTF-8');
 $calendarCacheFile = __DIR__ . '/../cache/i_calendar_cache_file_v2.ics';
-$xlsTemplateFile = __DIR__ . '/assets/evidencija-randog-vremena-v2.xlsx';
+$xlsTemplateFile = __DIR__ . '/assets/evidencija-randog-vremena-v3.xlsx';
 
 
 $notWorkingReasons = [
-    'N'=>'Godišnji odmor',
-    'O'=>'Bolovanje',
-    'P'=>'Plaćenoi dopust',
-    'Q'=>'Očinski dopust',
+    'O'=>'Godišnji odmor',
+    'P'=>'Bolovanje',
+    'Q'=>'Plaćenoi dopust',
+    'R'=>'Očinski dopust',
     'J'=>'Terenskog rad',
 ];
 
@@ -130,8 +130,8 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
     }
 
     $formatter->setPattern('LLLL');
-    $sheet->setCellValue('D3', mb_strtoupper( $formatter->format($date) ) );
-    $sheet->setCellValue('D4', $date->format('Y') );
+    $sheet->setCellValue('D3', $date->format('Y') );
+    $sheet->setCellValue('D4', mb_strtoupper( $formatter->format($date) ) );
 
     $formatter->setPattern('yyyy LLLL');
     $fileName =  $formatter->format($date)." - ".getPostVal('zaposlenik_naziv');
@@ -171,7 +171,14 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
 
             # praznici
             if( in_array($i, $praznici, true)  ) {
-                $col = 'G';
+                $col = 'N'; // blagdani
+//                if($blagdan==true) {
+//                    $col = 19; // Blagdan I-smj
+//                } else {
+//                    $col = 26; // Neradni dani i blagdani utvrđeni propisom
+//                }
+            } else if($col==='') {
+                $col = 'E'; // redovan rad
             }
             if($col!=='') {
                 $sheet->setCellValue($col . $row, $satnica);
